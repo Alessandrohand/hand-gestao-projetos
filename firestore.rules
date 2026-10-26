@@ -1,0 +1,60 @@
+rules_version = '2';
+// Regras de segurança — Hand · Gestão de Projetos
+// Acesso somente para e-mails cadastrados em /autorizados/{email} com ativo == true.
+// Cadastros, parâmetros e autorizações: somente perfil "gestor".
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+    function meuEmail() { return request.auth.token.email.lower(); }
+    function minhaAut() { return get(/databases/$(database)/documents/autorizados/$(meuEmail())); }
+    function autorizado() {
+      return logado()
+        && exists(/databases/$(database)/documents/autorizados/$(meuEmail()))
+        && minhaAut().data.ativo == true;
+    }
+    function gestor() { return autorizado() && minhaAut().data.perfil == 'gestor'; }
+
+    // Lista de acesso: cada um lê o próprio registro; o gestor mantém a lista.
+    match /autorizados/{email} {
+      allow read: if (logado() && email == meuEmail()) || autorizado();
+      allow write: if gestor();
+    }
+
+    // Cadastros e parâmetros: leitura da equipe, escrita do gestor.
+    match /config/{id}      { allow read: if autorizado(); allow write: if gestor(); }
+    match /consultores/{id} { allow read: if autorizado(); allow write: if gestor(); }
+    match /clientes/{id}    { allow read: if autorizado(); allow write: if gestor(); }
+    match /projetos/{id}    { allow read: if autorizado(); allow write: if gestor(); }
+    match /tipos/{id}       { allow read: if autorizado(); allow write: if gestor(); }
+
+    // Operação do dia a dia: toda a equipe lê e grava.
+    match /iniciativas/{id} { allow read, write: if autorizado(); }
+    match /marcos/{id}      { allow read, write: if autorizado(); }
+    match /extras/{id}      { allow read, write: if autorizado(); }
+    match /onepages/{id}    { allow read, write: if autorizado(); }
+
+    // Tarefas: a equipe grava; só o gestor pode registrar decisão de expurgo.
+    match /tarefas/{id} {
+      allow read, create: if autorizado();
+      allow update: if autorizado() && (
+        gestor()
+        || !('expurgo' in request.resource.data)
+        || request.resource.data.expurgo == null
+        || request.resource.data.expurgo.status == 'pendente'
+        || (('expurgo' in resource.data) && request.resource.data.expurgo == resource.data.expurgo)
+      );
+      allow delete: if autorizado();
+    }
+
+    // Registro de alterações: qualquer membro cria; só o gestor apaga; ninguém edita.
+    match /log/{id} {
+      allow read, create: if autorizado();
+      allow update: if false;
+      allow delete: if gestor();
+    }
+  }
+}

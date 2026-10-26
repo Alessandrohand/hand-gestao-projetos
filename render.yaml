@@ -1,1 +1,31 @@
-{ "indexes": [], "fieldOverrides": [] }
+# Blueprint do Render — site estático
+# As variáveis FIREBASE_* são lidas no build e gravadas em public/js/firebase-config.js.
+services:
+  - type: web
+    name: hand-gestao-projetos
+    runtime: static
+    buildCommand: node scripts/gerar-config.js
+    staticPublishPath: ./public
+    envVars:
+      - key: FIREBASE_API_KEY
+        sync: false
+      - key: FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: FIREBASE_APP_ID
+        sync: false
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /js/*
+        name: Cache-Control
+        value: no-cache

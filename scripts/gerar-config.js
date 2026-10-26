@@ -27,11 +27,16 @@ const config = {
 };
 if (e('FIREBASE_USE_EMULATOR') === 'true') config.emulador = true;
 
+const saida = path.join(raiz, 'public', 'js', 'firebase-config.js');
 const faltando = Object.entries(config).filter(([k, v]) => k !== 'emulador' && !v).map(([k]) => k);
-if (!config.apiKey) console.warn('⚠  FIREBASE_API_KEY não definida: o site será publicado em MODO LOCAL (demonstração).');
+if (!config.apiKey) {
+  // Sem variáveis: mantém o firebase-config.js versionado, se ele já estiver preenchido.
+  const atual = fs.existsSync(saida) ? fs.readFileSync(saida, 'utf8') : '';
+  if (/"apiKey":\s*"[^"]+"/.test(atual)) { console.log('ℹ  Variáveis FIREBASE_* ausentes: mantido o firebase-config.js já preenchido do repositório.'); process.exit(0); }
+  console.warn('⚠  FIREBASE_API_KEY não definida e firebase-config.js vazio: o site mostrará "Firebase não configurado".');
+}
 else if (faltando.length) { console.error('✖  Variáveis faltando: ' + faltando.join(', ')); process.exit(1); }
 
-const saida = path.join(raiz, 'public', 'js', 'firebase-config.js');
 fs.writeFileSync(saida,
 `/* Arquivo GERADO por scripts/gerar-config.js — não edite à mão.
    Os valores vêm das variáveis de ambiente (Render) ou do arquivo .env (local). */

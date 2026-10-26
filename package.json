@@ -1,0 +1,11 @@
+{
+  "name": "hand-gestao-projetos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hand · Gestão de Projetos (Render + Firebase)",
+  "scripts": {
+    "build": "node scripts/gerar-config.js",
+    "dev": "node scripts/gerar-config.js && cd public && python3 -m http.server 8080"
+  },
+  "engines": { "node": ">=18" }
+}
